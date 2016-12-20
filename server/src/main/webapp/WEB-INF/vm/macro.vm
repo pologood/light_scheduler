@@ -1,0 +1,39 @@
+#macro (showPage $module $page)
+    #if($page)
+    ##<ul class="pager">
+        #set($pagePos = 2)
+
+        #if($page.previousPageAvailable)
+        <li><a class="prev" href="$module.addQueryData("page",$!{page.previousPage}).render()"></a></li>
+        <li><a href="$module.addQueryData("page",1).render()">1</a></li>
+        #else
+        <li><a class="prev disabled"></a></li>
+        #end
+
+        #foreach($i in [$pagePos..1])
+            #if($!page.index - $i  -$pagePos>= 1 && $velocityCount==1)
+            <li>...</li>
+            #end
+            #if($!page.index - $i > 1)
+                #set($pageIndex= $!page.index - $i)
+            <li><a href="$module.addQueryData("page",$pageIndex).render()">$pageIndex</a></li>
+            #end
+        #end
+    <li><a class="current">$!page.index</a></li>
+        #foreach($i in [1..$pagePos])
+            #if($!page.totalPage - $!page.index - $i > 0)
+                #set($pageIndex= $!page.index + $!i)
+            <li><a href="$module.addQueryData("page",$pageIndex).render()">$pageIndex</a></li>
+            #end
+        #end
+        #if($!page.totalPage - $!page.index > $pagePos+1) <li>...</li> #end
+        #if($page.nextPageAvailable)
+        <li><a href="$module.addQueryData("page",$!{page.totalPage}).render()">$!{page.totalPage}</a></li>
+        <li><a class="next" href="$module.addQueryData("page",$!{page.nextPage}).render()"></a></li>
+        #else
+        <li><a class="next disabled"></a></li>
+        #end
+        $!module.reset()
+    ##</ul>
+    #end
+#end

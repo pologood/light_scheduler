@@ -1,0 +1,13 @@
+<!-- Main Footer -->
+<footer class="main-footer">
+    <!-- To the right -->
+    <div class="pull-right hidden-xs">
+        A light weight scheduler.
+    </div>
+    <!-- Default to the left -->
+    <strong>Copyright &copy; 2016 <a href="http://www.jd.com">JD.com</a>.</strong> All rights reserved.
+</footer>
+
+<!-- REQUIRED JS SCRIPTS -->
+<!-- AdminLTE App -->
+<script src="/static/js/app.min.js"></script>

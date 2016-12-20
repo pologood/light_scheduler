@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd"
+       default-autowire="byName">
+
+    <bean id="messageProcessors" class="java.util.HashMap" scope="singleton">
+        <constructor-arg>
+            <map>
+                <entry>
+                    <key>
+                        <value type="com.jd.eptid.scheduler.core.domain.message.MessageType">Heartbeat</value>
+                    </key>
+                    <ref bean="heartbeatMessageProcessor"/>
+                </entry>
+                <entry>
+                    <key>
+                        <value type="com.jd.eptid.scheduler.core.domain.message.MessageType">Hello</value>
+                    </key>
+                    <ref bean="helloMessageProcessor"/>
+                </entry>
+            </map>
+        </constructor-arg>
+    </bean>
+
+    <bean id="jobExecutors" class="java.util.ArrayList" scope="singleton">
+        <constructor-arg>
+            <list>
+                <ref bean="cronJobExecutor"/>
+                <ref bean="normalJobExecutor"/>
+            </list>
+        </constructor-arg>
+    </bean>
+
+    <bean id="retryStrategy" class="com.jd.eptid.scheduler.core.failover.RetryStrategy"/>
+
+</beans>
