@@ -1,16 +1,17 @@
 package com.jd.eptid.scheduler.server.job;
 
+import com.jd.eptid.scheduler.core.domain.job.Job;
+import com.jd.eptid.scheduler.core.domain.job.JobStatus;
 import com.jd.eptid.scheduler.core.domain.job.ScheduledJob;
-import com.jd.eptid.scheduler.core.domain.job.Status;
-import com.jd.eptid.scheduler.core.domain.node.Client;
 import com.jd.eptid.scheduler.core.domain.task.TaskConfig;
+import com.jd.eptid.scheduler.core.event.ScheduleEvent;
 import com.jd.eptid.scheduler.core.exception.ScheduleException;
 import com.jd.eptid.scheduler.core.response.JobSplitResponse;
 import com.jd.eptid.scheduler.core.statistics.JobStatistics;
-import com.jd.eptid.scheduler.server.chooser.ClientChooser;
-import com.jd.eptid.scheduler.server.core.AppContext;
+import com.jd.eptid.scheduler.server.core.ServerContext;
 import com.jd.eptid.scheduler.server.dao.ScheduledJobDao;
 import com.jd.eptid.scheduler.server.task.TaskScheduler;
+import com.jd.eptid.scheduler.server.task.TasksReceiver;
 import org.apache.commons.collections.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,71 +22,60 @@ import java.util.List;
 public class JobTracker {
     private Logger logger = LoggerFactory.getLogger(this.getClass());
     private ScheduledJobDao scheduledJobDao;
-    private ClientChooser clientChooser;
     private TasksReceiver tasksReceiver;
     private JobContext jobContext;
     private ScheduledJob scheduledJob;
     private TaskScheduler taskScheduler;
+    private Thread theThread;
 
     public JobTracker(JobContext context) {
         this.jobContext = context;
         taskScheduler = new TaskScheduler(jobContext);
         tasksReceiver = new TasksReceiver(jobContext);
-        clientChooser = AppContext.getInstance().getClientChooser();
-        scheduledJobDao = AppContext.getInstance().getScheduledJobDao();
+        scheduledJobDao = ServerContext.getInstance().getScheduledJobDao();
+        theThread = Thread.currentThread();
     }
 
-    public void start() {
+    public void track() throws Exception {
         prepare();
 
         try {
-            chooseJobClient();
-
             beforeRun();
 
             runJob();
-        } catch (Throwable e) {
-            logger.error("Failed to track job: {}.", jobContext.getJob().getName(), e);
-            updateStatus(Status.FAILED);
+
+            recordResult();
+        } catch (Exception e) {
+            handleException(e);
         } finally {
-            JobContextHolder.remove();
-            if (jobContext.getJobClient() != null) {
-                clientChooser.release(jobContext.getJob().getName(), jobContext.getJobClient());
-            }
+            tasksReceiver.destroy();
+            taskScheduler.stop(false);
+            logger.info("Job [{}, {}] done.", jobContext.getJob().getName(), jobContext.getScheduleId());
+            ServerContext.getInstance().getEventBroadcaster().publish(new ScheduleEvent<Job>(jobContext.getJob(), jobContext.getScheduleId(), ScheduleEvent.Code.DONE));
         }
     }
 
     private void prepare() {
         ScheduledJob scheduledJob = new ScheduledJob();
         scheduledJob.setJobId(jobContext.getJob().getId());
-        scheduledJob.setStatus(Status.WAITING);
+        scheduledJob.setScheduleId(jobContext.getScheduleId());
+        scheduledJob.setStatus(JobStatus.WAITING);
         scheduledJob.setCreateTime(new Date());
         int affected = scheduledJobDao.add(scheduledJob);
         if (affected <= 0) {
             throw new ScheduleException("Failed to add scheduled job: " + scheduledJob);
         }
         this.scheduledJob = scheduledJob;
-        jobContext.setScheduleId(scheduledJob.getId());
+        jobContext.setStoreId(scheduledJob.getId());
     }
 
-    private void chooseJobClient() {
-        logger.info("Choose a job client to run job: {}...", jobContext.getJob());
-        Client client = clientChooser.chooseAndOccupy(jobContext.getJob().getName());
-        if (client == null) {
-            throw new ScheduleException("Failed to choose a job client for job.", JobContextHolder.getContext().getJob());
-        }
-        logger.info("Job client {} was chosen to run job: {}.", client, jobContext.getJob());
-        jobContext.setJobClient(client);
-    }
-
-    private void beforeRun() {
-        taskScheduler.init();
+    private void beforeRun() throws InterruptedException {
+        updateStatus(JobStatus.RUNNING);
+        tasksReceiver.init();
         taskScheduler.start();
-
-        updateStatus(Status.RUNNING);
     }
 
-    private void updateStatus(Status newStatus) {
+    private void updateStatus(JobStatus newStatus) {
         int affected = 0;
         switch (newStatus) {
             case RUNNING:
@@ -106,61 +96,77 @@ public class JobTracker {
         }
     }
 
-    private void runJob() {
+    private void runJob() throws Exception {
         List<TaskConfig> taskConfigs = null;
         do {
             jobContext.incrSplitTimes();
-            JobSplitResponse response = null;
             try {
-                response = tasksReceiver.receive();
-            } catch (Exception e) {
-                throw new ScheduleException("Failed to split job.", jobContext.getJob(), response.getMessage());
-            }
-
-            taskConfigs = response.getTaskConfigs();
-            if (CollectionUtils.isNotEmpty(taskConfigs)) {
-                for (TaskConfig taskConfig : taskConfigs) {
-                    try {
-                        taskScheduler.addTask(taskConfig);
-                    } catch (InterruptedException e) {
-                        logger.error("Failed to add task.", e);
-                        break;
-                    }
+                JobSplitResponse response = tasksReceiver.receive(jobContext.getSplitTimes(), taskConfigs);
+                taskConfigs = response.getTaskConfigs();
+                if (taskConfigs == null) {
+                    throw new ScheduleException("Illegal split result.");
                 }
-            }
+                for (TaskConfig taskConfig : taskConfigs) {
+                    taskScheduler.addTask(taskConfig);
+                }
 
-            if (response.isLast()) {
-                break;
+                if (response.isLast()) {
+                    markSplitFinished();
+                    break;
+                }
+            } catch (Exception e) {
+                logger.error("Failed to split the job: {}.", jobContext.getJob().getName(), e);
+                markSplitFinished();
+                throw e;
             }
         } while (taskConfigs != null && CollectionUtils.isNotEmpty(taskConfigs));
 
-        taskScheduler.setJobSplitDone();
-        waitForCompleted();
-        reportResult();
+        logger.info("Job split finished. job:{}, scheduledId: {}.", jobContext.getJob().getName(), jobContext.getScheduleId());
+        waitForDone();
     }
 
-    private void waitForCompleted() {
-        try {
-            jobContext.getAllTaskFinishedLatch().await();
-        } catch (InterruptedException e) {
-            logger.error("Waiting for task completed is canceled.", e);
-        }
+    private void markSplitFinished() throws InterruptedException {
+        // insert a poison object to mark the finish of job splitting.
+        taskScheduler.addTask(TaskConfig.POISON);
     }
 
-    private void reportResult() {
+    private void waitForDone() throws InterruptedException {
+        jobContext.getJobStatistics().waitForDone();
+    }
+
+    private void recordResult() {
         int totalTasks = jobContext.getJobStatistics().getTotalTasks();
         int failedTasks = jobContext.getJobStatistics().getFailedTasks();
         int successTasks = jobContext.getJobStatistics().getSuccessTasks();
         if (totalTasks == successTasks) {
-            logger.info("Job {} has been executed successful.", jobContext.getJob().getName());
-            updateStatus(Status.SUCCESS);
+            logger.info("Job [{}] has been executed successful.", jobContext.getJob().getName());
+            updateStatus(JobStatus.SUCCESS);
         } else if (totalTasks == failedTasks) {
-            logger.info("Job {} has been executed failed.", jobContext.getJob().getName());
-            updateStatus(Status.FAILED);
+            logger.info("Job [{}] has been executed failed.", jobContext.getJob().getName());
+            updateStatus(JobStatus.FAILED);
         } else {
-            logger.info("Job {} has been executed partially successful.", jobContext.getJob().getName());
-            updateStatus(Status.PARTIAL_SUCCESS);
+            logger.info("Job [{}] has been executed partially successful.", jobContext.getJob().getName());
+            updateStatus(JobStatus.PARTIAL_SUCCESS);
         }
+    }
+
+    public JobContext getJobContext() {
+        return jobContext;
+    }
+
+    private void handleException(Exception e) throws Exception {
+        if (e instanceof InterruptedException) {
+            logger.error("Job scheduling [{}, {}] is canceled.", jobContext.getJob().getName(), jobContext.getScheduleId());
+            taskScheduler.stop(true);
+            updateStatus(JobStatus.CANCELED);
+        } else {
+            updateStatus(JobStatus.FAILED);
+            throw e;
+        }
+    }
+
+    public void cancel() {
+        theThread.interrupt();
     }
 
 }

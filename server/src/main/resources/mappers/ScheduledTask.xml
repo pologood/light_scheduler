@@ -5,6 +5,7 @@
     <resultMap type="com.jd.eptid.scheduler.core.domain.task.ScheduledTask" id="scheduledTaskResultMap">
         <result property="id" column="id"/>
         <result property="jobScheduleId" column="job_schedule_id"/>
+        <result property="scheduleId" column="schedule_id"/>
         <result property="data" column="data"/>
         <result property="clientIp" column="client_ip"/>
         <result property="status" column="status"/>
@@ -25,7 +26,7 @@
 
     <insert id="add" parameterType="com.jd.eptid.scheduler.core.domain.task.ScheduledTask" useGeneratedKeys="true"
             keyProperty="id">
-        INSERT INTO ts_scheduled_task(job_schedule_id, data, client_ip, status, create_time, start_time) VALUES (#{jobScheduleId}, #{data}, #{clientIp}, #{status}, NOW(), NOW())
+        INSERT INTO ts_scheduled_task(job_schedule_id, schedule_id, data, client_ip, status, create_time, start_time) VALUES (#{jobScheduleId}, #{scheduleId}, #{data}, #{clientIp}, #{status}, NOW(), NOW())
     </insert>
 
     <update id="updateStatus">

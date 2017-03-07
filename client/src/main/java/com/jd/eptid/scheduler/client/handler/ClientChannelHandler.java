@@ -1,15 +1,19 @@
 package com.jd.eptid.scheduler.client.handler;
 
 import com.alibaba.fastjson.JSON;
-import com.jd.eptid.scheduler.client.core.AppContext;
+import com.jd.eptid.scheduler.client.core.ClientContext;
 import com.jd.eptid.scheduler.client.network.ClientTransport;
-import com.jd.eptid.scheduler.core.processor.MessageProcessor;
 import com.jd.eptid.scheduler.core.domain.message.Message;
 import com.jd.eptid.scheduler.core.domain.message.MessageType;
+import com.jd.eptid.scheduler.core.event.NetworkStateEvent;
+import com.jd.eptid.scheduler.core.processor.MessageProcessor;
+import com.jd.eptid.scheduler.core.utils.NetworkUtils;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.timeout.IdleState;
 import io.netty.handler.timeout.IdleStateEvent;
+import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,17 +30,28 @@ public class ClientChannelHandler extends ChannelInboundHandlerAdapter {
     private int overtimeTimes = 0;
 
     public ClientChannelHandler() {
-        clientTransport = AppContext.getInstance().getClientTransport();
+        clientTransport = ClientContext.getInstance().getClientTransport();
     }
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
         logger.info("Register on server...");
+        notifyConnected(ctx.channel());
+        updateLocalNode(ctx.channel());
         sendHelloMessage(ctx);
     }
 
+    private void updateLocalNode(Channel channel) {
+        Pair<String, Integer> ipAndPort = NetworkUtils.getIpAndPort(channel);
+        ClientContext.getInstance().changeNode(ipAndPort.getLeft(), ipAndPort.getRight());
+    }
+
+    private void notifyConnected(Channel channel) {
+        ClientContext.getInstance().getEventBroadcaster().publish(new NetworkStateEvent(channel, NetworkStateEvent.Code.READY));
+    }
+
     private void sendHelloMessage(ChannelHandlerContext ctx) {
-        Set<String> jobNames = AppContext.getInstance().getJobs().keySet();
+        Set<String> jobNames = ClientContext.getInstance().getJobs().keySet();
 
         Message message = new Message();
         message.setType(MessageType.Hello.getCode());
@@ -47,7 +62,13 @@ public class ClientChannelHandler extends ChannelInboundHandlerAdapter {
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         logger.error("Disconnected from the server. Try reconnect it...");
+        notifyDisconnected(ctx.channel());
+        ClientContext.getInstance().getClientRegistry().unregister();
         clientTransport.connect();
+    }
+
+    private void notifyDisconnected(Channel channel) {
+        ClientContext.getInstance().getEventBroadcaster().publish(new NetworkStateEvent(channel, NetworkStateEvent.Code.UNAVAILABLE));
     }
 
     @Override
@@ -60,7 +81,7 @@ public class ClientChannelHandler extends ChannelInboundHandlerAdapter {
             return;
         }
 
-        MessageProcessor messageProcessor = AppContext.getInstance().getMessageProcessor(type);
+        MessageProcessor messageProcessor = ClientContext.getInstance().getMessageProcessor(type);
         if (messageProcessor != null) {
             messageProcessor.process(message, ctx);
         } else {

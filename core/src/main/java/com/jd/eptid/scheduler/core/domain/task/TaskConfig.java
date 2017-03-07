@@ -6,6 +6,7 @@ import com.alibaba.fastjson.JSON;
  * Created by classdan on 16-9-22.
  */
 public class TaskConfig<T> {
+    public static final TaskConfig<Void> POISON = new TaskConfig<Void>();
     private String jobName;
     private int num;
     private T param;
@@ -39,8 +40,8 @@ public class TaskConfig<T> {
         return retryTimes;
     }
 
-    public void setRetryTimes(int retryTimes) {
-        this.retryTimes = retryTimes;
+    public void incrRetryTimes() {
+        ++this.retryTimes;
     }
 
     @Override

@@ -2,10 +2,22 @@
 <beans xmlns="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
        xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
 
-    <bean id="schedulableClient" class="com.jd.eptid.scheduler.client.core.ClientBootstrap"/>
+    <bean id="clientBootstrap" class="com.jd.eptid.scheduler.client.core.ClientBootstrap"/>
 
     <bean id="testJob" class="com.jd.eptid.scheduler.client.test.job.TestJob"/>
 
     <bean id="testTask" class="com.jd.eptid.scheduler.client.test.job.TestTask"/>
+
+    <bean id="shortJob" class="com.jd.eptid.scheduler.client.test.job.ShortJob"/>
+
+    <bean id="shortTask" class="com.jd.eptid.scheduler.client.test.job.ShortTask"/>
+
+    <bean id="longJob" class="com.jd.eptid.scheduler.client.test.job.LongJob"/>
+
+    <bean id="longTask" class="com.jd.eptid.scheduler.client.test.job.LongTask"/>
+
+    <bean id="errorExistJob" class="com.jd.eptid.scheduler.client.test.job.ErrorExistJob"/>
+
+    <bean id="mayFailedTask" class="com.jd.eptid.scheduler.client.test.job.MayFailedTask"/>
 
 </beans>

@@ -1,7 +1,7 @@
 package com.jd.eptid.scheduler.core.test.domain;
 
-import com.jd.eptid.scheduler.core.domain.node.Node;
 import com.jd.eptid.scheduler.core.domain.node.Client;
+import com.jd.eptid.scheduler.core.domain.node.Node;
 import com.jd.eptid.scheduler.core.domain.node.Server;
 import org.junit.Assert;
 import org.junit.Test;

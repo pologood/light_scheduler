@@ -1,0 +1,155 @@
+<div class="schedule-info">
+
+</div>
+
+<section class="schedule-box" style="display: none">
+    <!-- title row -->
+    <div class="row">
+        <div class="col-xs-12">
+            <h2 class="page-header">
+                <i class="fa fa-tasks"></i> <span class="v-name"></span>
+            </h2>
+        </div>
+        <!-- /.col -->
+    </div>
+    <!-- info row -->
+    <div class="row">
+        <div class="col-sm-4 schedule-col">
+            <p><strong>Id: </strong><span class="v-id"></span></p>
+            <p><strong>Name: </strong><span class="v-name"></span></p>
+            <p><strong>Description: </strong><span class="v-desc"></span></p>
+        </div>
+        <!-- /.col -->
+        <div class="col-sm-4 schedule-col">
+            <p><strong>Start time: </strong><span class="v-start-time"></span></p>
+            <p><strong>Interval: </strong><span class="v-interval"></span></p>
+            <p><strong>Mutex jobs: </strong><span class="v-mutex"></span></p>
+            <p><strong>Failure strategy: </strong><span class="v-fail-strategy"></span></p>
+        </div>
+        <!-- /.col -->
+        <div class="col-sm-4 invoice-col">
+            <p><strong>Create time: </strong><span class="v-create-time"></span></p>
+            <p><strong>Update time: </strong><span class="v-update-time"></span></p>
+            <p><strong>Available: </strong><span class="v-available"></span></p>
+        </div>
+        <!-- /.col -->
+    </div>
+    <!-- /.row -->
+
+    <!-- Table row -->
+    <!-- /.row -->
+    <!-- /.content -->
+</section>
+
+<div class="row schedule-info-row table-info" style="display: none">
+    <div class="col-xs-12">
+        <div class="box">
+            <div class="box-header">
+                <h3 class="box-title"><strong class="v-job-schedule-id"></strong></h3>
+                <div class="box-tools">
+                    <strong>Job client: </strong><span class="v-job-client"></span>
+                </div>
+            </div>
+            <div class="box-body table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                    <tr>
+                        <th>Serial #</th>
+                        <th>Schedule id</th>
+                        <th>Task</th>
+                        <th>Client</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row schedule-info-row empty-info" style="display: none">
+    <div class="col-xs-12">
+        <div class="box">
+            <div class="box-body">
+                <h3 class="center-text">No task running information.</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    var jobId = $!{jobId};
+
+    $(function () {
+        var snapshotUrl = "/job/schedule/snapshot/" + jobId;
+        $.ajax({
+            type: "get",
+            url: snapshotUrl,
+            dataType: "json",
+            data: {jobId: jobId},
+            success: function (result) {
+                if (result && result.success) {
+                    var job = result.data.job;
+                    var scheduleInfo = result.data.scheduleInfo;
+
+                    var scheduleBox = $("section.schedule-box").clone();
+                    fillJobBasicInfo(scheduleBox, job);
+                    fillTaskInfo(scheduleBox, scheduleInfo);
+                    $("div.schedule-info").append(scheduleBox);
+                    scheduleBox.show();
+                }
+            },
+            error: function () {
+                alert("Failed to fetch the schedule detail of job: " + jobId);
+            }
+        });
+    });
+
+    function fillJobBasicInfo(scheduleBox, job) {
+        scheduleBox.find(".v-schedule-id").text();
+        scheduleBox.find(".v-id").text(job.id);
+        scheduleBox.find(".v-name").text(job.name);
+        scheduleBox.find(".v-desc").text(job.description);
+        scheduleBox.find(".v-start-time").text(job.startTime ? job.startTime : "INSTANT");
+        scheduleBox.find(".v-interval").text(job.periodicInterval ? job.periodicInterval : "NONE");
+        scheduleBox.find(".v-mutex").text(job.mutexJobIds && job.mutexJobIds.length > 0 ? job.mutexJobIds : "NONE");
+        scheduleBox.find(".v-fail-strategy").text(job.failoverPolicy);
+        scheduleBox.find(".v-create-time").text(job.createTime);
+        scheduleBox.find(".v-update-time").text(job.updateTime);
+        scheduleBox.find(".v-available").text(job.available);
+    }
+
+    function fillTaskInfo(scheduleBox, scheduleInfo) {
+        if (scheduleInfo && !$.isEmptyObject(scheduleInfo)) {
+            for (var scheduleId in scheduleInfo) {
+                var scheduleTable = $("div.table-info:not(.schedule-box .table-info)").clone();
+                scheduleTable.find(".v-job-schedule-id").text(scheduleId);
+
+                var clientsInfo = scheduleInfo[scheduleId];
+                scheduleTable.find(".v-job-client").text(clientsInfo.jobClient);
+
+                var trs = "";
+                for (var i = 0; i < clientsInfo.taskClients.length; ++i) {
+                    var taskClient = clientsInfo.taskClients[i];
+
+                    var tr = "<tr>";
+                    tr += "<td>" + (i + 1) + "</td>";
+                    tr += "<td>" + taskClient.scheduleId + "</td>";
+                    tr += "<td>" + JSON.stringify(taskClient.taskConfig.param) + "</td>";
+                    tr += "<td>" + (taskClient.client.ip + ":" + taskClient.client.port) + "</td>";
+                    tr += "</tr>";
+                    trs += tr;
+                }
+                scheduleTable.find("table tbody").append(trs);
+                scheduleTable.removeAttr("style");
+                scheduleBox.append(scheduleTable);
+            }
+        } else {
+            var emptyDiv = $("div.empty-info").clone();
+            emptyDiv.removeAttr("style");
+            scheduleBox.append(emptyDiv);
+        }
+    }
+
+</script>

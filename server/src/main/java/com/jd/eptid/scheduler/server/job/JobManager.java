@@ -10,13 +10,19 @@ import java.util.List;
  */
 public interface JobManager {
 
-    void addJob(Job job);
+    long addJob(Job job);
 
-    void removeJob(String id);
+    void update(long id, Job newJob);
 
-    void disable(String id);
+    void removeJob(long id);
+
+    void disable(long id);
+
+    void enable(long id);
 
     int count();
+
+    Job findJob(long id);
 
     List<Job> getAllJobs();
 

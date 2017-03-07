@@ -1,12 +1,12 @@
 package com.jd.eptid.scheduler.server.processor;
 
+import com.alibaba.fastjson.JSON;
 import com.jd.eptid.scheduler.core.domain.message.Message;
 import com.jd.eptid.scheduler.core.domain.message.MessageType;
 import com.jd.eptid.scheduler.core.processor.MessageProcessor;
 import com.jd.eptid.scheduler.core.utils.NetworkUtils;
-import com.jd.eptid.scheduler.server.core.AppContext;
+import com.jd.eptid.scheduler.server.core.ServerContext;
 import com.jd.eptid.scheduler.server.core.ClientManager;
-import com.jd.fastjson.JSON;
 import io.netty.channel.ChannelHandlerContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,7 +27,7 @@ public class HelloMessageProcessor implements MessageProcessor {
     private ClientManager clientManager;
 
     public HelloMessageProcessor() {
-        clientManager = AppContext.getInstance().getClientManager();
+        clientManager = ServerContext.getInstance().getClientManager();
     }
 
     @Override

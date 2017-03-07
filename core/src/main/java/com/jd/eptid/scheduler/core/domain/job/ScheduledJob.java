@@ -9,7 +9,8 @@ import java.util.Date;
 public class ScheduledJob {
     private long id;
     private long jobId;
-    private Status status;
+    private String scheduleId;
+    private JobStatus status;
     private int totalTasks;
     private int successTasks;
     private int failedTasks;
@@ -33,11 +34,19 @@ public class ScheduledJob {
         this.jobId = jobId;
     }
 
-    public Status getStatus() {
+    public String getScheduleId() {
+        return scheduleId;
+    }
+
+    public void setScheduleId(String scheduleId) {
+        this.scheduleId = scheduleId;
+    }
+
+    public JobStatus getStatus() {
         return status;
     }
 
-    public void setStatus(Status status) {
+    public void setStatus(JobStatus status) {
         this.status = status;
     }
 

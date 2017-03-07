@@ -1,13 +1,13 @@
 package com.jd.eptid.scheduler.test.network;
 
-import com.jd.eptid.scheduler.core.domain.node.Client;
 import com.jd.eptid.scheduler.core.domain.message.Message;
 import com.jd.eptid.scheduler.core.domain.message.MessageType;
+import com.jd.eptid.scheduler.core.domain.node.Client;
+import com.jd.eptid.scheduler.core.event.AsyncEventBroadcaster;
 import com.jd.eptid.scheduler.core.exception.CommunicationException;
-import com.jd.eptid.scheduler.server.core.AppContext;
+import com.jd.eptid.scheduler.server.core.ServerContext;
 import com.jd.eptid.scheduler.server.core.ClientManager;
-import com.jd.eptid.scheduler.core.failover.FailoverStrategy;
-import com.jd.eptid.scheduler.core.failover.RetryStrategy;
+import com.jd.eptid.scheduler.server.handler.ServerChannelHandler;
 import com.jd.eptid.scheduler.server.network.ChannelHolder;
 import com.jd.eptid.scheduler.server.network.SchedulerServerTransport;
 import com.jd.eptid.scheduler.server.network.ServerTransport;
@@ -30,17 +30,15 @@ public class SchedulerServerTransportTest {
     private Logger logger = LoggerFactory.getLogger(this.getClass());
     private ServerTransport serverTransport;
     private ClientManager clientManager;
-    private FailoverStrategy failoverStrategy;
 
     @Before
     public void init() throws Exception {
-        AppContext appContext = AppContext.getInstance();
-        appContext.setClientManager(new ClientManager());
-        appContext.setServerTransport(new SchedulerServerTransport());
+        ServerContext serverContext = ServerContext.getInstance();
+        serverContext.setClientManager(new ClientManager());
+        serverContext.setServerTransport(new SchedulerServerTransport(new AsyncEventBroadcaster(), new ServerChannelHandler()));
 
-        serverTransport = appContext.getServerTransport();
-        clientManager = appContext.getClientManager();
-        failoverStrategy = new RetryStrategy();
+        serverTransport = serverContext.getServerTransport();
+        clientManager = serverContext.getClientManager();
 
         serverTransport.start();
     }
@@ -80,7 +78,7 @@ public class SchedulerServerTransportTest {
 
     @After
     public void destroy() throws Exception {
-        serverTransport.shutdown();
+        serverTransport.stop();
     }
 
 }

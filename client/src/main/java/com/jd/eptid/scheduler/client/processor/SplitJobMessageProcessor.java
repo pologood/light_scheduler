@@ -1,7 +1,7 @@
 package com.jd.eptid.scheduler.client.processor;
 
 import com.alibaba.fastjson.JSON;
-import com.jd.eptid.scheduler.client.core.AppContext;
+import com.jd.eptid.scheduler.client.core.ClientContext;
 import com.jd.eptid.scheduler.client.core.ConfigItem;
 import com.jd.eptid.scheduler.client.core.Job;
 import com.jd.eptid.scheduler.client.core.SplitResult;
@@ -49,7 +49,7 @@ public class SplitJobMessageProcessor implements MessageProcessor {
             SplitContext splitContext = JSON.parseObject(message.getContent(), SplitContext.class);
             String jobName = splitContext.getJobName();
             Assert.hasText(jobName);
-            Job job = AppContext.getInstance().getJob(jobName);
+            Job job = ClientContext.getInstance().getJob(jobName);
             Assert.notNull(job, "Job for job [" + jobName + "] not found.");
 
             executeJobSplit(job, splitContext, message, ctx);

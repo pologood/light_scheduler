@@ -29,7 +29,7 @@ public class ResponseFuturePool {
                     }
                 }
             }
-        }, 10, 1, TimeUnit.SECONDS);
+        }, 0, 1, TimeUnit.SECONDS);
     }
 
     public static ResponseFuture<Message> getResponseFuture(String messageId) {

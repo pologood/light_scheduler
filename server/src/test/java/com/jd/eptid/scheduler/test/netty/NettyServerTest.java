@@ -23,8 +23,6 @@ import java.util.concurrent.TimeUnit;
 /**
  * Created by classdan on 16-9-12.
  */
-//@RunWith(SpringJUnit4ClassRunner.class)
-//@ContextConfiguration(locations = {"classpath:spring-config-beans.xml"})
 public class NettyServerTest {
 
     public static class Server {
@@ -42,7 +40,7 @@ public class NettyServerTest {
                 @Override
                 protected void initChannel(SocketChannel ch) throws Exception {
                     ch.pipeline().addLast(new MessageEncoder());
-                    ch.pipeline().addLast(new MessageDecoder(1024));
+                    ch.pipeline().addLast(new MessageDecoder(102400));
                     ch.pipeline().addLast(new ServerChannelHandler(thisServer));
                 }
             }).option(ChannelOption.SO_KEEPALIVE, true);
@@ -99,7 +97,7 @@ public class NettyServerTest {
             Message message = (Message) msg;
             System.out.println(message);
 
-            Message response = null;
+            /*Message response = null;
             switch (message.getType()) {
                 case 1:
                     response = new Message(MessageType.Hello, "Hi, client.");
@@ -108,7 +106,7 @@ public class NettyServerTest {
                     response = new Message(MessageType.Hello, "NOP");
                     break;
             }
-            ctx.writeAndFlush(response);
+            ctx.writeAndFlush(response);*/
         }
 
         @Override
@@ -122,14 +120,6 @@ public class NettyServerTest {
     public void test() throws InterruptedException, UnsupportedEncodingException {
         Server server = new Server();
         server.start(9188);
-
-        /*TimeUnit.SECONDS.sleep(10);
-
-        Header header = new Header();
-        header.setLength(200);
-        header.setHeaderLength(12);
-        Message message = new Message(MessageType.Hello, "A good day.");
-        server.send("127.0.0.1", message);*/
 
         TimeUnit.HOURS.sleep(1);
         server.shutdown();

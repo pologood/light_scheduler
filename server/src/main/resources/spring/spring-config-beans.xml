@@ -23,14 +23,13 @@
         </constructor-arg>
     </bean>
 
-    <bean id="jobExecutors" class="java.util.ArrayList" scope="singleton">
+    <!--<bean id="jobExecutors" class="java.util.ArrayList" scope="singleton">
         <constructor-arg>
             <list>
                 <ref bean="cronJobExecutor"/>
-                <ref bean="normalJobExecutor"/>
             </list>
         </constructor-arg>
-    </bean>
+    </bean>-->
 
     <bean id="retryStrategy" class="com.jd.eptid.scheduler.core.failover.RetryStrategy"/>
 

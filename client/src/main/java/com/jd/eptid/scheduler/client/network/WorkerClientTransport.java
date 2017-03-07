@@ -1,13 +1,13 @@
 package com.jd.eptid.scheduler.client.network;
 
 import com.google.common.base.Throwables;
-import com.jd.eptid.scheduler.client.core.AppContext;
+import com.jd.eptid.scheduler.client.core.ClientContext;
 import com.jd.eptid.scheduler.client.handler.ClientChannelHandler;
 import com.jd.eptid.scheduler.core.decoder.MessageDecoder;
 import com.jd.eptid.scheduler.core.domain.message.Message;
 import com.jd.eptid.scheduler.core.domain.node.Node;
 import com.jd.eptid.scheduler.core.encoder.MessageEncoder;
-import com.jd.eptid.scheduler.core.network.AbstractTransport;
+import com.jd.eptid.scheduler.core.event.MasterChangedEvent;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -23,12 +23,16 @@ import java.util.concurrent.TimeUnit;
 /**
  * Created by classdan on 16-9-14.
  */
-public class WorkerClientTransport extends AbstractTransport<Channel> implements ClientTransport {
+public class WorkerClientTransport implements ClientTransport {
     private Logger logger = LoggerFactory.getLogger(this.getClass());
     private Bootstrap bootstrap;
     private Channel channel;
     private EventLoopGroup workerGroup;
     private CountDownLatch startedLatch = new CountDownLatch(1);
+
+    public WorkerClientTransport() {
+        ClientContext.getInstance().getEventBroadcaster().register(MasterChangedEvent.class, this);
+    }
 
     @Override
     public synchronized void start() {
@@ -53,19 +57,23 @@ public class WorkerClientTransport extends AbstractTransport<Channel> implements
         }
 
         if (channel != null && channel.isActive()) {
-            logger.warn("Client is already connected to server.");
+            logger.warn("Client already connected to server.");
             return;
         }
 
-        Node masterNode = AppContext.getInstance().getMasterNode();
-        final ChannelFuture channelFuture = bootstrap.connect(masterNode.getIp(), masterNode.getPort());
+        Node masterNode = ClientContext.getInstance().getMasterNode();
+        if (masterNode == null) {
+            logger.error("Master node not found, abandon the connection try.");
+            return;
+        }
+
+        ChannelFuture channelFuture = bootstrap.connect(masterNode.getIp(), masterNode.getPort());
         channelFuture.addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(ChannelFuture future) throws Exception {
                 if (future.isSuccess()) {
                     logger.info("Connect to server successfully.");
                     channel = future.channel();
-                    notifyReadyListeners(channel);
                 } else {
                     logger.error("Failed to connect to server, try reconnect after 3s...");
                     future.channel().eventLoop().schedule(new Runnable() {
@@ -80,11 +88,13 @@ public class WorkerClientTransport extends AbstractTransport<Channel> implements
     }
 
     @Override
-    public void disconnect() {
+    public synchronized void disconnect() {
+        logger.info("Disconnect from the server...");
         if (channel != null) {
             channel.disconnect();
             channel = null;
         }
+        logger.info("Disconnect from the server successful.");
     }
 
     private void initEventLoopGroup() {
@@ -92,10 +102,15 @@ public class WorkerClientTransport extends AbstractTransport<Channel> implements
     }
 
     @Override
-    public void shutdown() {
+    public void stop() {
         if (workerGroup != null) {
             workerGroup.shutdownGracefully();
         }
+    }
+
+    @Override
+    public int order() {
+        return 0;
     }
 
     @Override
@@ -108,4 +123,18 @@ public class WorkerClientTransport extends AbstractTransport<Channel> implements
         channel.writeAndFlush(message);
     }
 
+    @Override
+    public void onEvent(MasterChangedEvent event) {
+        Node oldMasterNode = ClientContext.getInstance().getMasterNode();
+        Node newMasterNode = event.getMasterNode();
+        ClientContext.getInstance().setMasterNode(newMasterNode);
+
+        if (channel != null && channel.isActive()) {
+            this.disconnect();
+        }
+
+        if (newMasterNode != null && !newMasterNode.equals(oldMasterNode)) {
+            this.connect();
+        }
+    }
 }

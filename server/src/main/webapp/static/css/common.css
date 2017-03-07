@@ -1,0 +1,34 @@
+td a {
+    padding-left: 10px;
+}
+
+.box .box-body .box-item {
+    padding: 5px;
+}
+
+.box-item .progress {
+    margin-bottom: 0px;
+}
+
+.zero-padding {
+    padding: 0px;
+}
+
+.center-text {
+    text-align: center;
+}
+
+.empty-info h3 {
+    margin: 24px 0px;
+}
+
+.schedule-box {
+    position: relative;
+    background: #fff;
+    border: 1px solid #f4f4f4;
+    padding: 20px;
+}
+
+.schedule-info-row {
+    margin-top: 10px;
+}

@@ -1,7 +1,5 @@
 package com.jd.eptid.scheduler.core.domain.task;
 
-import com.jd.eptid.scheduler.core.domain.job.Status;
-
 import java.util.Date;
 
 /**
@@ -10,9 +8,10 @@ import java.util.Date;
 public class ScheduledTask {
     private long id;
     private long jobScheduleId;
+    private String scheduleId;
     private String data;
     private String clientIp;
-    private Status status;
+    private TaskStatus status;
     private String errorMessage;
     private Date createTime;
     private Date startTime;
@@ -34,6 +33,14 @@ public class ScheduledTask {
         this.jobScheduleId = jobScheduleId;
     }
 
+    public String getScheduleId() {
+        return scheduleId;
+    }
+
+    public void setScheduleId(String scheduleId) {
+        this.scheduleId = scheduleId;
+    }
+
     public String getData() {
         return data;
     }
@@ -50,11 +57,11 @@ public class ScheduledTask {
         this.clientIp = clientIp;
     }
 
-    public Status getStatus() {
+    public TaskStatus getStatus() {
         return status;
     }
 
-    public void setStatus(Status status) {
+    public void setStatus(TaskStatus status) {
         this.status = status;
     }
 

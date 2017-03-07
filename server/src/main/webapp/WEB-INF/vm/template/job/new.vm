@@ -1,3 +1,5 @@
+<link rel="stylesheet" href="/static/js/plugins/datetimepicker/bootstrap-datetimepicker.min.css">
+
 <!-- Content Header (Page header) -->
 <section class="content-header">
     <h1>
@@ -23,59 +25,130 @@
                 <!-- form start -->
                 <form class="form-horizontal">
                     <div class="box-body">
+                        <input type="hidden" name="jobId" id="idInput" value="$!{jobId}">
                         <div class="form-group">
                             <label for="nameInput" class="col-sm-2 control-label">Name</label>
 
                             <div class="col-sm-10">
-                                <input type="text" class="form-control" id="nameInput" placeholder="Job name">
+                                <input type="text" class="form-control" id="nameInput" placeholder="Job name"
+                                       value="$!{name}">
                             </div>
                         </div>
                         <div class="form-group">
                             <label for="descInput" class="col-sm-2 control-label">Description</label>
 
                             <div class="col-sm-10">
-                                <input type="text" class="form-control" id="descInput" placeholder="Job description">
+                                <input type="text" class="form-control" id="descInput" placeholder="Job description"
+                                       value="$!{description}">
                             </div>
                         </div>
                         <div class="form-group">
                             <div class="col-sm-offset-2 col-sm-10">
                                 <div class="checkbox">
                                     <label>
-                                        <input type="checkbox" id="isCronCheckbox"> Cron job?
+                                        #if($cron)
+                                            <input type="checkbox" id="isCronCheckbox" checked> Periodic job?
+                                        #else
+                                            <input type="checkbox" id="isCronCheckbox"> Periodic job?
+                                        #end
                                     </label>
                                 </div>
                             </div>
                         </div>
-                        <div class="form-group">
-                            <label for="intervalInput" class="col-sm-2 control-label">Interval</label>
+                        <div class="optionSection">
+                            <div class="form-group">
+                                <label class="col-sm-2 control-label">Start time</label>
 
-                            <div class="col-sm-10">
-                                <input type="text" class="form-control cronOption" id="intervalInput"
-                                       placeholder="Job interval">
+                                <div class="radio col-sm-10">
+                                    <div class="col-sm-3 zero-padding">
+                                        <label>
+                                            <input type="radio" name="startTimeType" value="0" checked>
+                                            Instant
+                                        </label>
+                                    </div>
+                                    <div class="col-sm-5 zero-padding">
+                                        <label class="pull-left" style="margin-right: 10px;">
+                                            <input type="radio" name="startTimeType" value="1">Specify:
+                                        </label>
+                                        <div class="input-group date">
+                                            <div class="input-group-addon">
+                                                <i class="fa fa-calendar"></i>
+                                            </div>
+                                            <input type="text" class="form-control" id="datepicker">
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                        <div class="form-group cronOption">
-                            <label for="yesRadio" class="col-sm-2 control-label">Allow concurrent</label>
-                            <div class="radio col-sm-10">
-                                <label>
-                                    <input type="radio" name="allowConcurrent" id="yesRadio" class="cronOption"
-                                           value="true"
-                                           checked="">
-                                    Yes
-                                </label>
-                                <label style="margin-left: 50px;">
-                                    <input type="radio" name="allowConcurrent" id="noRadio" class="cronOption"
-                                           value="false"
-                                           checked="">
-                                    No
-                                </label>
+                            <div class="form-group">
+                                <label for="intervalInput" class="col-sm-2 control-label">Interval</label>
+
+                                <div class="col-sm-10">
+                                    <input type="text" class="form-control cronOption" id="intervalInput"
+                                           placeholder="Job interval(seconds)" value="$!{interval}">
+                                </div>
+                            </div>
+                            <div class="form-group cronOption">
+                                <label for="yesRadio" class="col-sm-2 control-label">Allow concurrent</label>
+                                <div class="radio col-sm-10">
+                                    <label>
+                                        #if($allowConcurrent)
+                                            <input type="radio" name="allowConcurrent" id="yesRadio" class="cronOption"
+                                                   value="true" checked>
+                                        #else
+                                            <input type="radio" name="allowConcurrent" id="yesRadio" class="cronOption"
+                                                   value="true">
+                                        #end
+                                        Yes
+                                    </label>
+                                    <label style="margin-left: 50px;">
+                                        #if($allowConcurrent)
+                                            <input type="radio" name="allowConcurrent" id="noRadio" class="cronOption"
+                                                   value="false">
+                                        #else
+                                            <input type="radio" name="allowConcurrent" id="noRadio" class="cronOption"
+                                                   value="false"
+                                                   checked>
+                                        #end
+                                        No
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="mutexJobInput" class="col-sm-2 control-label">Mutex job</label>
+
+                                <div class="col-sm-10">
+                                    <input type="text" class="form-control" id="mutexJobInput"
+                                           placeholder="Mutex job id list, separate by comma(,)"
+                                           value="$!{mutexJobIds}">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="col-sm-2 control-label">Failure strategy</label>
+                                <div class="radio col-sm-10">
+                                    <label>
+                                        <input type="radio" name="failoverPolicy" value="NONE" checked>
+                                        None
+                                    </label>
+                                    <label style="margin-left: 50px;">
+                                        <input type="radio" name="failoverPolicy" value="RETRY">
+                                        Retry
+                                    </label>
+                                    <label style="margin-left: 50px;">
+                                        <input type="radio" name="failoverPolicy" value="MANUAL">
+                                        Manual
+                                    </label>
+                                    <label style="margin-left: 50px;">
+                                        <input type="radio" name="failoverPolicy" value="ALARM">
+                                        Alarm
+                                    </label>
+                                </div>
                             </div>
                         </div>
                     </div>
                     <!-- /.box-body -->
                     <div class="box-footer">
                         <button type="button" id="cancelBtn" class="btn btn-default">Cancel</button>
-                        <button type="submit" class="btn btn-info pull-right">Submit</button>
+                        <button type="button" id="submitBtn" class="btn btn-info pull-right">Submit</button>
                     </div>
                     <!-- /.box-footer -->
                 </form>
@@ -84,14 +157,26 @@
     </div>
 </section>
 
+<!-- Datepicker -->
+<script src="/static/js/plugins/datetimepicker/bootstrap-datetimepicker.min.js"></script>
+
 <script>
     $(function () {
         $("#isCronCheckbox").on("change", function () {
             var isCron = $("#isCronCheckbox").is(":checked");
             if (isCron) {
-                $(".cronOption").removeAttr("disabled");
+                $(".optionSection input.cronOption").removeAttr("disabled");
             } else {
-                $(".cronOption").attr("disabled", "disabled");
+                $(".optionSection input.cronOption").attr("disabled", "disabled");
+            }
+        });
+
+        $("input:radio[name='startTimeType']").on("change", function () {
+            var checkedValue = $("input:radio[name='startTimeType']:checked").val();
+            if (checkedValue == "1") {
+                $("#datepicker").removeAttr("disabled");
+            } else {
+                $("#datepicker").attr("disabled", "disabled");
             }
         });
 
@@ -100,6 +185,107 @@
             return;
         });
 
+        $("#submitBtn").on("click", function () {
+            try {
+                validateForm();
+            } catch (e) {
+                alert(e);
+                return;
+            }
+
+            var job = {
+                id: $("#idInput").val().trim(),
+                name: $("#nameInput").val().trim(),
+                description: $("#descInput").val().trim(),
+                cron: $("#isCronCheckbox").is(":checked"),
+                startTime: getStartTime(),
+                interval: $("#intervalInput").val().trim(),
+                mutexJobIds: parseMutexJobIds($("#mutexJobInput").val().trim()),
+                failureStrategy: $("input[name='failoverPolicy']:checked").val(),
+                allowConcurrent: $("input[name='allowConcurrent']:checked").val()
+            };
+            var url = $("#idInput").val().trim() === "" ? "/job/new" : "/job/edit";
+            $.ajax({
+                type: "post",
+                url: url,
+                dataType: "json",
+                contentType: "application/json",
+                data: JSON.stringify(job),
+                success: function (result) {
+                    if (result && result.success) {
+                        alert("Save job successful.");
+                        window.location.href = "/job/manage";
+                    } else {
+                        alert("Failed to save the job. " + result.message);
+                    }
+                },
+                error: function () {
+                    alert("Failed to save the job.");
+                }
+            });
+        });
+
         $("#isCronCheckbox").trigger("change");
-    })
+        $("input:radio[name='startTimeType']").trigger("change");
+
+        $('#datepicker').datetimepicker({
+            autoclose: true,
+            format: "yyyy-mm-dd hh:ii:ss"
+        });
+    });
+
+    function getStartTime() {
+        var startTimeType = $("input:radio[name='startTimeType']:checked").val();
+        if (startTimeType == "1") {
+            return $('#datepicker').val().trim();
+        } else {
+            return null;
+        }
+    }
+
+    function validateForm() {
+        var name = $("#nameInput").val().trim();
+        var desc = $("#descInput").val().trim();
+        var interval = $("#intervalInput").val().trim();
+        var mutexJobs = $("#mutexJobInput").val().trim();
+        var isCron = $("#isCronCheckbox").is(":checked");
+        if (!name || name == "") {
+            throw "Name should not be empty!";
+        }
+        if (isCron) {
+            var startTimeType = $("input:radio[name='startTimeType']:checked").val();
+            if (startTimeType === "1" && getStartTime() == null) {
+                throw "Start time should not be empty!";
+            }
+            if (!interval || interval == "") {
+                throw "Interval should not be empty!";
+            }
+            if (!isInteger(interval)) {
+                throw "Interval should be a number.";
+            }
+            if (parseInt(interval) < 10) {
+                throw "Interval is too short. It should be greater than 10 secends.";
+            }
+        }
+        if (mutexJobs != "" && parseMutexJobIds(mutexJobs) == null) {
+            throw "Mutex job id list is illegel.";
+        }
+    }
+
+    function parseMutexJobIds(mutexJobStr) {
+        var jobIds = [];
+        var jobIdStrs = mutexJobStr.split(",");
+        for (var i = 0; i < jobIdStrs.length; ++i) {
+            var jobIdStr = jobIdStrs[i];
+            if (!isInteger(jobIdStr)) {
+                return null;
+            }
+            jobIds.push(parseInt(jobIdStr));
+        }
+        return jobIds;
+    }
+
+    function isInteger(str) {
+        return /^\d+$/.test(str);
+    }
 </script>

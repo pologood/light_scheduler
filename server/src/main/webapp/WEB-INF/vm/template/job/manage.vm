@@ -42,19 +42,12 @@
                                         <th class="sorting" tabindex="0" aria-controls="jobs_table" rowspan="1"
                                             colspan="1" aria-label="Name: activate to sort column ascending">Name
                                         </th>
-                                        <th class="sorting" tabindex="0" aria-controls="jobs_table" rowspan="1"
-                                            colspan="1" aria-label="Description: activate to sort column ascending">
-                                            Description
-                                        </th>
-                                        <th class="sorting" tabindex="0" aria-controls="jobs_table" rowspan="1"
-                                            colspan="1" aria-label="Interval: activate to sort column ascending">
-                                            Interval
-                                        </th>
-                                        <th class="sorting" tabindex="0" aria-controls="jobs_table" rowspan="1"
-                                            colspan="1"
-                                            aria-label="Allow concurrent: activate to sort column ascending">Allow
-                                            concurrent
-                                        </th>
+                                        <th>Description</th>
+                                        <th>Start time</th>
+                                        <th>Interval</th>
+                                        <th>Mutex jobs</th>
+                                        <th>Failure strategy</th>
+                                        <th>Allow concurrent</th>
                                         <th class="sorting" tabindex="0" aria-controls="jobs_table" rowspan="1"
                                             colspan="1" aria-label="Create time: activate to sort column ascending">
                                             Create time
@@ -63,10 +56,8 @@
                                             colspan="1" aria-label="Update time: activate to sort column ascending">
                                             Update time
                                         </th>
-                                        <th class="sorting" tabindex="0" aria-controls="jobs_table" rowspan="1"
-                                            colspan="1" aria-label="Available: activate to sort column ascending">
-                                            Available
-                                        </th>
+                                        <th>Available</th>
+                                        <th>Operation</th>
                                     </tr>
                                     </thead>
                                 </table>
@@ -92,20 +83,116 @@
 <script>
     $(function () {
         $('#jobs_table').DataTable({
+            "ordering": false,
             "processing": true,
             "serverSide": true,
             "ajax": "/job/list",
+            "columnDefs": [
+                {
+                    "defaultContent": "",
+                    "targets": "_all"
+                },
+                {
+                    "targets": 3,
+                    "data": "startTime",
+                    "render": function (data, type, full, meta) {
+                        return data ? data : "INSTANT";
+                    }
+                },
+                {
+                    "targets": 5,
+                    "data": "mutexJobIds",
+                    "render": function (data, type, full, meta) {
+                        return (data && data.length > 0) ? data : "NONE";
+                    }
+                },
+                {
+                    "targets": 11,
+                    "data": null,
+                    "render": function (data, type, full, meta) {
+                        var links = "";
+                        if (data.available) {
+                            links += "<a class='disableLink' href='javascript:void(0);'>Disable</a>";
+                        } else {
+                            links += "<a class='enableLink' href='javascript:void(0);'>Enable</a>";
+                        }
+                        links += "<a class='modifyLink' href='javascript:void(0);'>Modify</a>";
+                        return links;
+                    }
+                }
+            ],
             "columns": [
                 {"data": "id"},
                 {"data": "name"},
                 {"data": "description"},
+                {"data": "startTime"},
                 {"data": "periodicInterval"},
-                {"data": "multipleExecution"}
+                {"data": "mutexJobIds"},
+                {"data": "failoverPolicy"},
+                {"data": "allowConcurrent"},
+                {"data": "createTime"},
+                {"data": "updateTime"},
+                {"data": "available"}
             ]
         });
 
         $("#newJobBtn").on("click", function () {
             window.location.href = "/job/new";
+        });
+
+        $("#jobs_table").on("click", ".enableLink", function () {
+            if (!confirm("Enable the job?")) {
+                return;
+            }
+
+            var jobId = $(this).closest("tr").children("td").first().text();
+            $.ajax({
+                type: "post",
+                url: "/job/enable",
+                dataType: "json",
+                data: {jobId: jobId},
+                success: function (result) {
+                    if (result && result.success) {
+                        alert("Enable the job successful.");
+                        window.location.reload(true);
+                    } else {
+                        alert("Failed to enable the job. " + result.message);
+                    }
+                },
+                error: function () {
+                    alert("Failed to enable the job.");
+                }
+            });
+        });
+
+        $("#jobs_table").on("click", ".disableLink", function () {
+            if (!confirm("Disable the job?")) {
+                return;
+            }
+
+            var jobId = $(this).closest("tr").children("td").first().text();
+            $.ajax({
+                type: "post",
+                url: "/job/disable",
+                dataType: "json",
+                data: {jobId: jobId},
+                success: function (result) {
+                    if (result && result.success) {
+                        alert("Disable the job successful.");
+                        window.location.reload(true);
+                    } else {
+                        alert("Failed to disable the job. " + result.message);
+                    }
+                },
+                error: function () {
+                    alert("Failed to disable the job.");
+                }
+            });
+        });
+
+        $("#jobs_table").on("click", ".modifyLink", function () {
+            var jobId = $(this).closest("tr").children("td").first().text();
+            window.location.href = "/job/edit?id=" + jobId;
         });
     });
 </script>

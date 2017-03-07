@@ -15,7 +15,7 @@
         <param name="encoding" value="UTF-8"/>
         <param name="MaxFileSize" value="3MB"/>
         <param name="Append" value="true"/>
-        <param name="file" value="/export/scheduler.jd.id/scheduler-all.log"/>
+        <param name="file" value="/export/Logs/scheduler.jd.id/scheduler-client-all.log"/>
         <layout class="org.apache.log4j.PatternLayout">
             <param name="ConversionPattern" value="[%t] - %d - [%5p] - %l - %m\n"/>
         </layout>
@@ -29,7 +29,7 @@
         <param name="DatePattern" value="'.'yyyy-MM-dd"/>
         <param name="Append" value="true"/>
         <param name="Threshold" value="ERROR"/>
-        <param name="file" value="/export/scheduler.jd.id/scheduler-error.log"/>
+        <param name="file" value="/export/Logs/scheduler.jd.id/scheduler-client-error.log"/>
         <layout class="org.apache.log4j.PatternLayout">
             <param name="ConversionPattern" value="[%t] - %d - [%5p] - %l - %m\n"/>
         </layout>
@@ -39,7 +39,7 @@
         <param name="encoding" value="UTF-8"/>
         <param name="MaxFileSize" value="3MB"/>
         <param name="Append" value="true"/>
-        <param name="file" value="/export/scheduler.jd.id/scheduler-zk.log"/>
+        <param name="file" value="/export/Logs/scheduler.jd.id/scheduler-client-zk.log"/>
         <layout class="org.apache.log4j.PatternLayout">
             <param name="ConversionPattern" value="[%t] - %d - [%5p] - %l - %m\n"/>
         </layout>

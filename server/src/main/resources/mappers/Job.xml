@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jd.eptid.scheduler.server.dao.JobDao">
+    <resultMap type="com.jd.eptid.scheduler.server.po.JobEntity" id="jobResultMap">
+        <result property="id" column="id"/>
+        <result property="name" column="job_id"/>
+        <result property="description" column="description"/>
+        <result property="startTime" column="start_time"/>
+        <result property="executeInterval" column="execute_interval"/>
+        <result property="concurrentExecution" column="concurrent_execution"/>
+        <result property="mutexJobs" column="mutex_jobs"/>
+        <result property="failoverPolicy" column="failover_policy"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="available" column="yn"/>
+    </resultMap>
+
+    <insert id="add" parameterType="com.jd.eptid.scheduler.server.po.JobEntity" useGeneratedKeys="true"
+            keyProperty="id">
+        INSERT INTO ts_job(name, description, start_time, execute_interval, concurrent_execution, mutex_jobs, failover_policy, create_time, yn) VALUES (#{name}, #{description}, #{startTime}, #{executeInterval}, #{concurrentExecution}, #{mutexJobs}, #{failoverPolicy}, NOW(), #{available})
+    </insert>
+
+    <select id="count" resultType="java.lang.Integer">
+        SELECT count(*) FROM ts_job
+    </select>
+
+    <select id="getAllJobs" resultMap="jobResultMap">
+        SELECT * FROM ts_job
+    </select>
+
+    <select id="getAvailableJobs" resultMap="jobResultMap">
+        SELECT * FROM ts_job WHERE yn = 1
+    </select>
+
+    <select id="getJobById" resultMap="jobResultMap">
+        SELECT * FROM ts_job WHERE id = #{id}
+    </select>
+
+    <update id="update">
+        UPDATE ts_job
+        <set>
+            update_time=NOW(),
+            <if test="name != null">
+                name = #{name},
+            </if>
+            <if test="description != null">
+                description = #{description},
+            </if>
+            <if test="startTime != null">
+                start_time = #{startTime},
+            </if>
+            <if test="executeInterval != null">
+                execute_interval = #{executeInterval},
+            </if>
+            <if test="concurrentExecution != null">
+                concurrent_execution = #{concurrentExecution},
+            </if>
+            <if test="mutexJobs != null">
+                mutex_jobs = #{mutexJobs},
+            </if>
+            <if test="failoverPolicy != null">
+                failover_policy = #{failoverPolicy},
+            </if>
+        </set>
+        WHERE id=#{id}
+    </update>
+
+    <update id="updateStatus">
+        UPDATE ts_job SET yn=#{yn}, update_time=NOW() WHERE id = #{id}
+    </update>
+
+    <delete id="delete" parameterType="java.lang.Long">
+        DELETE FROM ts_job WHERE id = #{id}
+    </delete>
+
+</mapper>

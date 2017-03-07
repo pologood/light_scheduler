@@ -1,7 +1,5 @@
 package com.jd.eptid.scheduler.server.loadbalance;
 
-import org.springframework.stereotype.Component;
-
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.List;
@@ -12,7 +10,6 @@ import java.util.concurrent.ThreadLocalRandom;
 /**
  * Created by classdan on 16-9-29.
  */
-@Component("consistentHashLoadBalance")
 public class ConsistentHashLoadBalance<T> implements LoadBalance<T> {
     @Override
     public T select(List<T> shards, String seed) {

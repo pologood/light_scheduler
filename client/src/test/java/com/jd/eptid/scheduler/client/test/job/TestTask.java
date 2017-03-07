@@ -6,6 +6,7 @@ import com.jd.eptid.scheduler.client.test.param.TestParam;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -22,7 +23,9 @@ public class TestTask implements Task<TestParam> {
     @Override
     public void run(TestParam param) throws Exception {
         logger.info("Run task: {}.", JSON.toJSONString(param));
-        TimeUnit.SECONDS.sleep(10);
+        Random random = new Random();
+        int timeout = random.nextInt(60);
+        TimeUnit.SECONDS.sleep(timeout);
         logger.info("Run task: {} successful.", JSON.toJSONString(param));
     }
 }

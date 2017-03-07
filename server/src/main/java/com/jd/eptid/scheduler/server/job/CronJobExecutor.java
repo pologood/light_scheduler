@@ -1,89 +1,99 @@
 package com.jd.eptid.scheduler.server.job;
 
+import com.jd.eptid.scheduler.core.common.ScheduleThreadFactory;
 import com.jd.eptid.scheduler.core.config.Configuration;
-import com.jd.eptid.scheduler.core.domain.job.CronJob;
 import com.jd.eptid.scheduler.core.domain.job.Job;
-import com.jd.eptid.scheduler.core.domain.job.ScheduledJob;
-import com.jd.eptid.scheduler.core.exception.ScheduleException;
+import com.jd.eptid.scheduler.core.domain.job.OneShotJob;
+import com.jd.eptid.scheduler.core.domain.job.PeriodicJob;
+import com.jd.eptid.scheduler.core.utils.TimeUtils;
 import com.jd.eptid.scheduler.server.config.ConfigItem;
-import com.jd.eptid.scheduler.server.dao.ScheduledJobDao;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
 
-import javax.annotation.Resource;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.concurrent.*;
+import java.util.Date;
+import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Created by ClassDan on 2016/9/18.
  */
 @Component
-public class CronJobExecutor implements JobExecutor {
+public class CronJobExecutor extends AbstractJobExecutor {
     private Logger logger = LoggerFactory.getLogger(this.getClass());
+    private static final int ORDER = 3;
     private ScheduledExecutorService scheduledExecutor = null;
-    private List<ScheduledFuture> scheduledFutures = new LinkedList();
-    @Resource
-    private ScheduledJobDao scheduledJobDao;
 
     @Override
-    public boolean supports(Job job) {
-        return job instanceof CronJob;
-    }
-
-    @Override
-    public Future execute(Job job) {
-        logger.info("Prepare to execute job: {}.", job);
-        Assert.notNull(job.getId());
-
-        CronJob cronJob = (CronJob) job;
-        ScheduledJob scheduledJob = scheduledJobDao.findRunningJobByJobId(cronJob.getId());
-        if (scheduledJob != null && !cronJob.allowMultipleExecution()) {
-            throw new ScheduleException("Waiting for previous job to complete.", job, scheduledJob);
+    protected Future doJob(TrackTask trackTask) {
+        Job job = trackTask.getJob();
+        long delay = 0;
+        if (job.getStartTime() != Job.INSTANT) {
+            delay = TimeUtils.getInterval(new Date(), job.getStartTime(), TimeUnit.SECONDS);
         }
 
-        return doExecute(job);
+        if (job instanceof PeriodicJob) {
+            return doPeriodicJob(delay, trackTask);
+        } else if (job instanceof OneShotJob) {
+            return doOneShotJob(delay, trackTask);
+        }
+        return null;
     }
 
-    private ScheduledFuture doExecute(final Job job) {
-        ScheduledFuture future = scheduledExecutor.scheduleWithFixedDelay(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    JobContext context = new JobContext();
-                    context.setJob(job);
-                    JobContextHolder.setContext(context);
+    private Future doOneShotJob(long delay, TrackTask trackTask) {
+        return scheduledExecutor.schedule(trackTask, delay, TimeUnit.SECONDS);
+    }
 
-                    JobTracker jobTracker = new JobTracker(context);
-                    jobTracker.start();
-                } catch (Exception e) {
-                    logger.error("Failed to execute job: {}.", job, e);
-                }
+    private Future doPeriodicJob(long delay, TrackTask trackTask) {
+        return scheduledExecutor.scheduleAtFixedRate(trackTask, delay, ((PeriodicJob) trackTask.getJob()).getPeriodicInterval(), TimeUnit.SECONDS);
+    }
+
+    @Override
+    protected void onJobDone(long jobId, String scheduleId) {
+        SubmittedJob submittedJob = submittedJobs.get(jobId);
+        if (submittedJob == null) {
+            return;
+        }
+
+        Job job = submittedJob.getJob();
+        if (job instanceof OneShotJob) {
+            logger.info("Remove the submittedJob: {}, {}.", jobId, scheduleId);
+            removeSubmittedJob(submittedJob);
+        } else if (job instanceof PeriodicJob) {
+            if (submittedJob.isRemoved()) {
+                logger.info("Remove the submittedJob: {}, {}.", jobId, scheduleId);
+                removeSubmittedJob(submittedJob);
+            } else {
+                logger.info("Remove the jobTracker: {}, {}.", jobId, scheduleId);
+                submittedJob.removeJobTracker(scheduleId);
             }
-        }, 0, ((CronJob) job).getPeriodicInterval(), TimeUnit.SECONDS);
-        scheduledFutures.add(future);
-        return future;
+        }
     }
 
     @Override
     public void start() {
         int poolSize = Configuration.getInteger(ConfigItem.BIZ_POOL_SIZE, 5);
-        scheduledExecutor = Executors.newScheduledThreadPool(poolSize, new ThreadFactory() {
-            @Override
-            public Thread newThread(Runnable r) {
-                return new Thread(r, "cron-job-executor");
-            }
-        });
-        Assert.notNull(scheduledExecutor);
+        ScheduledThreadPoolExecutor scheduledThreadPoolExecutor = new ScheduledThreadPoolExecutor(poolSize, new ScheduleThreadFactory("Cron-Job-Executor-"));
+        Assert.notNull(scheduledThreadPoolExecutor);
+        scheduledThreadPoolExecutor.setRemoveOnCancelPolicy(true);
+        this.scheduledExecutor = scheduledThreadPoolExecutor;
     }
 
     @Override
     public void stop() {
+        logger.info("Stop cron job executor...");
         if (scheduledExecutor != null && !scheduledExecutor.isShutdown()) {
-            scheduledExecutor.shutdown();
+            scheduledExecutor.shutdownNow();
         }
+        logger.info("Stop cron job executor successful.");
+    }
+
+    @Override
+    public int order() {
+        return ORDER;
     }
 
 }

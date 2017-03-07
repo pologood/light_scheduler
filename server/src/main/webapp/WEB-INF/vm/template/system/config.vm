@@ -1,0 +1,114 @@
+<!-- Content Header (Page header) -->
+<section class="content-header">
+    <h1>
+        System
+        <small>Configuration</small>
+    </h1>
+    <ol class="breadcrumb">
+        <li><a href="/"><i class="fa fa-dashboard"></i> System Config</a></li>
+    </ol>
+</section>
+
+<!-- Main content -->
+<section class="content">
+    <div class="row">
+        <div class="col-xs-12">
+            <div class="box box-info">
+                <div class="box-header with-border">
+                    <h3 class="box-title">Configuration Items</h3>
+                </div>
+                <!-- /.box-header -->
+                <form class="form-horizontal">
+                    <div class="box-body">
+                        <div class="form-group">
+                            <label for="zkUrlInput" class="col-sm-2 control-label">Zookeeper url:</label>
+
+                            <div class="col-sm-10">
+                                <input type="text" class="form-control" id="zkUrlInput" disabled>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="zkTimeoutInput" class="col-sm-2 control-label">Zookeeper timeout:</label>
+
+                            <div class="col-sm-10">
+                                <input type="text" class="form-control" id="zkTimeoutInput" disabled>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="servicePortInput" class="col-sm-2 control-label">Service port:</label>
+
+                            <div class="col-sm-10">
+                                <input type="text" class="form-control" id="servicePortInput" disabled>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="jobSplitPoolSizeInput" class="col-sm-2 control-label">Job split thread pool
+                                size:</label>
+
+                            <div class="col-sm-10">
+                                <input type="text" class="form-control" id="jobSplitPoolSizeInput" disabled>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="jobSplitTimeoutInput" class="col-sm-2 control-label">Job split
+                                timeout(minutes):</label>
+
+                            <div class="col-sm-10">
+                                <input type="text" class="form-control" id="jobSplitTimeoutInput" disabled>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="jobRetryTimesInput" class="col-sm-2 control-label">Job max retry times:</label>
+
+                            <div class="col-sm-10">
+                                <input type="text" class="form-control" id="jobRetryTimesInput" disabled>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="taskTimeoutInput" class="col-sm-2 control-label">Task timeout(minutes):</label>
+
+                            <div class="col-sm-10">
+                                <input type="text" class="form-control" id="taskTimeoutInput" disabled>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="taskRetryTimesInput" class="col-sm-2 control-label">Task max retry
+                                times:</label>
+
+                            <div class="col-sm-10">
+                                <input type="text" class="form-control" id="taskRetryTimesInput" disabled>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</section>
+
+<script>
+    $(function () {
+        $.ajax({
+            type: "get",
+            url: "/system/list",
+            dataType: "json",
+            data: null,
+            success: function (result) {
+                if (result && result.success) {
+                    var map = result.data;
+                    $("#zkUrlInput").val(map["zk.connection.url"]);
+                    $("#zkTimeoutInput").val(map["zk.connection.timeout"]);
+                    $("#servicePortInput").val(map["scheduler.server.service.port"]);
+                    $("#jobSplitPoolSizeInput").val(map["scheduler.server.job.pool.size"]);
+                    $("#jobSplitTimeoutInput").val(map["scheduler.server.job.split.timeout"]);
+                    $("#jobRetryTimesInput").val(map["scheduler.server.job.retry.times"]);
+                    $("#taskTimeoutInput").val(map["scheduler.server.task.run.timeout"]);
+                    $("#taskRetryTimesInput").val(map["scheduler.server.task.retry.times"]);
+                }
+            },
+            error: function () {
+                alert("Failed to fetch the system configuration.");
+            }
+        });
+    });
+</script>

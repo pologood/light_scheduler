@@ -1,7 +1,7 @@
 package com.jd.eptid.scheduler.client.processor;
 
 import com.alibaba.fastjson.JSON;
-import com.jd.eptid.scheduler.client.core.AppContext;
+import com.jd.eptid.scheduler.client.core.ClientContext;
 import com.jd.eptid.scheduler.client.core.ConfigItem;
 import com.jd.eptid.scheduler.client.core.Task;
 import com.jd.eptid.scheduler.core.config.Configuration;
@@ -48,7 +48,7 @@ public class RunTaskMessageProcessor implements MessageProcessor {
         try {
             TaskConfig taskConfig = JSON.parseObject(message.getContent(), TaskConfig.class);
             String jobName = taskConfig.getJobName();
-            Task task = AppContext.getInstance().getTask(jobName);
+            Task task = ClientContext.getInstance().getTask(jobName);
             Assert.notNull(task, "Task for job [" + jobName + "] not found.");
 
             executeTask(task, taskConfig, message, ctx);

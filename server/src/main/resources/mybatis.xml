@@ -11,8 +11,10 @@
     </typeAliases>
 
     <typeHandlers>
-        <typeHandler javaType="com.jd.eptid.scheduler.core.domain.job.Status"
-                     handler="com.jd.eptid.scheduler.server.dao.StatusTypeHandler"/>
+        <typeHandler javaType="com.jd.eptid.scheduler.core.domain.job.JobStatus"
+                     handler="com.jd.eptid.scheduler.server.dao.JobStatusTypeHandler"/>
+        <typeHandler javaType="com.jd.eptid.scheduler.core.domain.task.TaskStatus"
+                     handler="com.jd.eptid.scheduler.server.dao.TaskStatusTypeHandler"/>
     </typeHandlers>
 
 </configuration>

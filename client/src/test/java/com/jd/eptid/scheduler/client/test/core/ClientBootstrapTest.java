@@ -16,7 +16,7 @@ public class ClientBootstrapTest {
 
     @Test
     public void testStandby() throws InterruptedException {
-        TimeUnit.HOURS.sleep(1);
+        TimeUnit.DAYS.sleep(1);
     }
 
 }

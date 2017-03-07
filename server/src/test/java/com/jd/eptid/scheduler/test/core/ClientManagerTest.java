@@ -46,6 +46,33 @@ public class ClientManagerTest {
     public void testUnregister() {
         clientManager.unregister("127.0.0.1", 8820);
         Assert.assertTrue(clientManager.getAllClients().size() == 2);
+        System.out.println(clientManager.getAllSchedulableClients());
+        Assert.assertTrue(clientManager.getSchedulableClients("Job1").size() == 1);
+        Assert.assertTrue(clientManager.getSchedulableClients("Job2").size() == 1);
+        Assert.assertTrue(clientManager.getSchedulableClients("Job3").size() == 1);
+    }
+
+    @Test
+    public void testUnregister2() {
+        clientManager.unregister("127.0.0.1", 8820);
+        clientManager.unregister("127.0.0.1", 8821);
+        Assert.assertTrue(clientManager.getAllClients().size() == 1);
+        System.out.println(clientManager.getAllSchedulableClients());
+        Assert.assertTrue(clientManager.getSchedulableClients("Job1").size() == 0);
+        Assert.assertTrue(clientManager.getSchedulableClients("Job2").size() == 1);
+        Assert.assertTrue(clientManager.getSchedulableClients("Job3").size() == 0);
+    }
+
+    @Test
+    public void testUnregister3() {
+        clientManager.unregister("127.0.0.1", 8820);
+        clientManager.unregister("127.0.0.1", 8821);
+        clientManager.unregister("127.0.0.1", 8822);
+        Assert.assertTrue(clientManager.getAllClients().size() == 0);
+        System.out.println(clientManager.getAllSchedulableClients());
+        Assert.assertTrue(clientManager.getSchedulableClients("Job1").size() == 0);
+        Assert.assertTrue(clientManager.getSchedulableClients("Job2").size() == 0);
+        Assert.assertTrue(clientManager.getSchedulableClients("Job3").size() == 0);
     }
 
 }

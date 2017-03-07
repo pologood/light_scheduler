@@ -12,7 +12,11 @@ public class Message {
     private long timestamp;
 
     public Message() {
-        messageId = generateId();
+        this(generateId());
+    }
+
+    public Message(String replyMessageId) {
+        messageId = replyMessageId;
         timestamp = System.currentTimeMillis();
     }
 

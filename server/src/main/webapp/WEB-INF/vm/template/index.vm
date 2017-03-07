@@ -14,14 +14,14 @@
             <!-- small box -->
             <div class="small-box bg-aqua">
                 <div class="inner">
-                    <h3>3</h3>
+                    <h3 id="jobCountItem">0</h3>
 
                     <p>Jobs</p>
                 </div>
                 <div class="icon">
-                    <i class="ion ion-bag"></i>
+                    <i class="fa fa-tasks"></i>
                 </div>
-                <a href="#" class="small-box-footer">More info <i class="fa fa-arrow-circle-right"></i></a>
+                <a href="/job/manage" class="small-box-footer">More info <i class="fa fa-arrow-circle-right"></i></a>
             </div>
         </div>
         <!-- ./col -->
@@ -29,14 +29,14 @@
             <!-- small box -->
             <div class="small-box bg-green">
                 <div class="inner">
-                    <h3>18</h3>
+                    <h3 id="clientCountItem">0</h3>
 
                     <p>Clients</p>
                 </div>
                 <div class="icon">
-                    <i class="ion ion-stats-bars"></i>
+                    <i class="fa fa-desktop"></i>
                 </div>
-                <a href="#" class="small-box-footer">More info <i class="fa fa-arrow-circle-right"></i></a>
+                <a href="/client/manage" class="small-box-footer">More info <i class="fa fa-arrow-circle-right"></i></a>
             </div>
         </div>
         <!-- ./col -->
@@ -44,14 +44,14 @@
             <!-- small box -->
             <div class="small-box bg-yellow">
                 <div class="inner">
-                    <h3>198</h3>
+                    <h3 id="scheduledTimesItem">0</h3>
 
                     <p>Schedule Times</p>
                 </div>
                 <div class="icon">
-                    <i class="ion ion-person-add"></i>
+                    <i class="fa fa-clock-o"></i>
                 </div>
-                <a href="#" class="small-box-footer">More info <i class="fa fa-arrow-circle-right"></i></a>
+                <a href="/job/history" class="small-box-footer">More info <i class="fa fa-arrow-circle-right"></i></a>
             </div>
         </div>
         <!-- ./col -->
@@ -59,14 +59,14 @@
             <!-- small box -->
             <div class="small-box bg-red">
                 <div class="inner">
-                    <h3>100<sup style="font-size: 20px">%</sup></h3>
+                    <h3><span id="successRateItem">0</span><sup style="font-size: 20px">%</sup></h3>
 
                     <p>Success Rate</p>
                 </div>
                 <div class="icon">
-                    <i class="ion ion-pie-graph"></i>
+                    <i class="fa fa-flag-o"></i>
                 </div>
-                <a href="#" class="small-box-footer">More info <i class="fa fa-arrow-circle-right"></i></a>
+                <a href="/job/history" class="small-box-footer">More info <i class="fa fa-arrow-circle-right"></i></a>
             </div>
         </div>
         <!-- ./col -->
@@ -76,3 +76,30 @@
 
 </section>
 <!-- /.content -->
+
+<script>
+    $(function () {
+        $.ajax({
+            type: "get",
+            url: "/statistics",
+            dataType: "json",
+            data: null,
+            success: function (result) {
+                if (result && result.success) {
+                    var map = result.data;
+                    $("#jobCountItem").text(map["jobCount"]);
+                    $("#clientCountItem").text(map["clientCount"]);
+                    $("#scheduledTimesItem").text(map["totalSchedules"]);
+                    $("#successRateItem").text(toPercent(map["successRate"]));
+                }
+            },
+            error: function () {
+                alert("Failed to fetch the statistic data.");
+            }
+        });
+    });
+
+    function toPercent(rate) {
+        return (Math.round(rate * 10000) / 100).toFixed(2);
+    }
+</script>

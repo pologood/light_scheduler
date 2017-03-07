@@ -1,10 +1,13 @@
 package com.jd.eptid.scheduler.server.network;
 
+import com.jd.eptid.scheduler.core.common.ShutdownHook;
 import com.jd.eptid.scheduler.core.config.Configuration;
 import com.jd.eptid.scheduler.core.decoder.MessageDecoder;
 import com.jd.eptid.scheduler.core.domain.message.Message;
 import com.jd.eptid.scheduler.core.encoder.MessageEncoder;
-import com.jd.eptid.scheduler.core.network.AbstractTransport;
+import com.jd.eptid.scheduler.core.event.EventBroadcaster;
+import com.jd.eptid.scheduler.core.event.NetworkStateEvent;
+import com.jd.eptid.scheduler.core.utils.NetworkUtils;
 import com.jd.eptid.scheduler.server.config.ConfigItem;
 import com.jd.eptid.scheduler.server.handler.ServerChannelHandler;
 import io.netty.bootstrap.ServerBootstrap;
@@ -14,10 +17,9 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
 
-import javax.annotation.Resource;
+import java.net.InetSocketAddress;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -26,18 +28,25 @@ import java.util.concurrent.TimeoutException;
 /**
  * Created by classdan on 16-9-14.
  */
-@Component
-public class SchedulerServerTransport extends AbstractTransport<Channel> implements ServerTransport {
+public class SchedulerServerTransport implements ServerTransport {
     private Logger logger = LoggerFactory.getLogger(this.getClass());
-    @Resource
+    private static final int ORDER = 0;
     private ServerChannelHandler serverChannelHandler;
     private Channel serverChannel;
     private EventLoopGroup bossGroup;
     private EventLoopGroup workerGroup;
     private CountDownLatch startedLatch = new CountDownLatch(1);
+    private EventBroadcaster eventBroadcaster;
+
+    public SchedulerServerTransport(EventBroadcaster eventBroadcaster, ServerChannelHandler serverChannelHandler) {
+        this.eventBroadcaster = eventBroadcaster;
+        this.serverChannelHandler = serverChannelHandler;
+        ShutdownHook.getInstance().addLifeCycleObject(this);
+    }
 
     @Override
     public void start() {
+        logger.info("Start transport...");
         initEventLoopGroups();
 
         ServerBootstrap serverBootstrap = new ServerBootstrap();
@@ -54,12 +63,12 @@ public class SchedulerServerTransport extends AbstractTransport<Channel> impleme
             @Override
             public void operationComplete(ChannelFuture future) throws Exception {
                 if (future.isSuccess()) {
-                    logger.info("Server start successful. Port:{}.", port);
+                    logger.info("Transport start successful. Port:{}.", port);
                     serverChannel = future.channel();
                     startedLatch.countDown();
-                    notifyReadyListeners(serverChannel);
+                    notifyReady();
                 } else {
-                    logger.info("Failed to start server. Port:{}.", port);
+                    logger.error("Failed to start transport. Port:{}.", port, future.cause());
                     workerGroup.shutdownGracefully();
                     bossGroup.shutdownGracefully();
                 }
@@ -72,11 +81,20 @@ public class SchedulerServerTransport extends AbstractTransport<Channel> impleme
         workerGroup = new NioEventLoopGroup();
     }
 
+    private void notifyReady() {
+        eventBroadcaster.publish(new NetworkStateEvent(serverChannel, NetworkStateEvent.Code.READY));
+    }
+
     @Override
-    public void shutdown() {
-        logger.info("Server shutdown...");
+    public void stop() {
+        logger.info("Transport shutdown...");
         workerGroup.shutdownGracefully();
         bossGroup.shutdownGracefully();
+    }
+
+    @Override
+    public int order() {
+        return ORDER;
     }
 
     @Override
@@ -96,6 +114,7 @@ public class SchedulerServerTransport extends AbstractTransport<Channel> impleme
     public Message send(Channel channel, Message message, int timeout, TimeUnit timeUnit) throws InterruptedException, ExecutionException, TimeoutException {
         checkStarted();
         Assert.notNull(channel);
+        checkChannelStatus(channel);
 
         final ResponseFuture<Message> responseFuture = new ResponseFuture<Message>();
         responseFuture.setTimeout(timeUnit.toMillis(timeout));
@@ -111,6 +130,12 @@ public class SchedulerServerTransport extends AbstractTransport<Channel> impleme
             }
         });
         return responseFuture.get(timeout, timeUnit);
+    }
+
+    private void checkChannelStatus(Channel channel) {
+        if (!channel.isActive()) {
+            throw new ChannelException("Channel is inactive. " + NetworkUtils.getIpAddress((InetSocketAddress) channel.remoteAddress()));
+        }
     }
 
     private void checkStarted() {

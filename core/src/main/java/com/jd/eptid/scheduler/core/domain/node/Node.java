@@ -10,7 +10,7 @@ import java.util.regex.Pattern;
 /**
  * Created by classdan on 16-10-31.
  */
-public abstract class Node {
+public abstract class Node implements Cloneable {
     private static final char ROLE_SEPARATOR = '_';
     private static final char IP_PORT_SEPARATOR = ':';
     private static final Pattern idPattern = Pattern.compile("(.+)_(.+):(\\d+)");
@@ -80,6 +80,11 @@ public abstract class Node {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    @Override
+    protected Object clone() throws CloneNotSupportedException {
+        return super.clone();
     }
 
     @Override

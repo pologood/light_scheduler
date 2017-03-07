@@ -1,7 +1,7 @@
 package com.jd.eptid.scheduler.core.master;
 
-import com.jd.eptid.scheduler.core.domain.node.Node;
-import com.jd.eptid.scheduler.core.zk.ZookeeperTransport;
+import com.jd.eptid.scheduler.core.event.EventBroadcaster;
+import com.jd.eptid.scheduler.core.zk.ZookeeperEndpoint;
 import org.springframework.util.Assert;
 
 import java.util.List;
@@ -9,14 +9,19 @@ import java.util.List;
 /**
  * Created by classdan on 16-10-31.
  */
-public class MasterElector extends AbstractMasterChooser {
+public class MasterElector extends ZkBasedMasterChooser {
 
-    public MasterElector(ZookeeperTransport zookeeperTransport, Node thisNode) {
-        super(zookeeperTransport, thisNode);
+    public MasterElector(ZookeeperEndpoint zookeeperEndpoint, EventBroadcaster eventBroadcaster) {
+        super(zookeeperEndpoint, eventBroadcaster);
     }
 
     @Override
     public void choose(List<String> candidates) {
+        if (candidates.isEmpty()) {
+            setMaster(null);
+            return;
+        }
+
         Assert.notEmpty(candidates);
         String minSequenceChild = getMinSequenceChild(candidates);
         setMaster(minSequenceChild);

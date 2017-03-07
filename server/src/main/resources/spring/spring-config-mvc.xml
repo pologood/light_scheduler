@@ -23,6 +23,7 @@
                     <util:list>
                         <value>QuoteFieldNames</value>
                         <value>WriteDateUseDateFormat</value>
+                        <value>DisableCircularReferenceDetect</value>
                     </util:list>
                 </property>
             </bean>

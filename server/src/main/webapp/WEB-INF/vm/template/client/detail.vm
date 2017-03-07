@@ -1,0 +1,159 @@
+<!-- Switch -->
+<link rel="stylesheet" href="/static/js/plugins/switch/bootstrap-switch.min.css">
+
+<!-- Content Header (Page header) -->
+<section class="content-header">
+    <h1>
+        Client
+        <small>Detail</small>
+    </h1>
+    <ol class="breadcrumb">
+        <li><a href="/"><i class="fa fa-dashboard"></i> Client</a></li>
+        <li><a href="/client/manage">Client management</a></li>
+        <li class="active">Detail</li>
+    </ol>
+</section>
+
+<!-- Main content -->
+<section class="content">
+    <div class="row">
+        <div class="col-xs-6">
+            <div class="box">
+                <div class="box-header with-border">
+                    <h3 class="box-title">Support Jobs</h3>
+                </div>
+                <!-- /.box-header -->
+                <div class="box-body">
+                    <table id="supportedJobsTable" class="table table-bordered">
+                        <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Job</th>
+                            <th>Schedulable</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        </tbody>
+                    </table>
+                </div>
+                <!-- /.box-body -->
+            </div>
+        </div>
+        <div class="col-xs-6">
+            <div class="box">
+                <div class="box-header with-border">
+                    <h3 class="box-title">Information</h3>
+                </div>
+                <!-- /.box-header -->
+                <div class="box-body">
+                    <div class="box-item">
+                        <span><strong>OS: </strong>Linux - 2.6.32-504.16.2.el6.x86_64 - unknown / 64bit</span>
+                    </div>
+                    <div class="box-item">
+                        <span><strong>JVM: </strong> Java HotSpot(TM) 64-Bit Server VM - 24.71-b01</span>
+                    </div>
+                    <div class="box-item">
+                        <span><strong>CPU: </strong> 70%</span>
+                        <div class="progress progress-xxs">
+                            <div class="progress-bar" style="width: 70%"></div>
+                        </div>
+                    </div>
+                    <div class="box-item">
+                        <span><strong>Memory: </strong> 30%</span>
+                        <div class="progress progress-xxs">
+                            <div class="progress-bar" style="width: 30%"></div>
+                        </div>
+                    </div>
+                    <div class="box-item">
+                        <span><strong>Disk: </strong> 22%</span>
+                        <div class="progress progress-xxs">
+                            <div class="progress-bar" style="width: 22%"></div>
+                        </div>
+                    </div>
+                </div>
+                <!-- /.box-body -->
+            </div>
+        </div>
+    </div>
+</section>
+
+<script src="/static/js/plugins/switch/bootstrap-switch.min.js"></script>
+
+<script>
+    var ip = "$ip";
+    var port = $port;
+
+    $(function () {
+        fetchSupportedJobInformation();
+
+        $("#supportedJobsTable").on("switchChange.bootstrapSwitch", "input[type=checkbox]", function (e, state) {
+            var jobName = $(this).closest("tr").children().eq(1).text();
+            var url = state ? "/client/enable" : "/client/disable";
+            $.ajax({
+                type: "post",
+                url: url,
+                dataType: "json",
+                data: {
+                    jobName: jobName,
+                    ip: ip,
+                    port: port
+                },
+                success: function (result) {
+                    if (!result || !result.success) {
+                        alert("Failed to change schedulable status.");
+                    }
+                },
+                error: function () {
+                    alert("Failed to change schedulable status.");
+                }
+            });
+        });
+    });
+
+    function fetchSupportedJobInformation() {
+        $.ajax({
+            type: "get",
+            url: "/client/supportJobs",
+            dataType: "json",
+            data: {
+                ip: ip,
+                port: port
+            },
+            success: function (result) {
+                if (result && result.success) {
+                    var supportedJobs = result.data["supportedJobs"];
+                    var schedulableJobs = result.data["schedulableJobs"];
+                    if (!supportedJobs) {
+                        return;
+                    }
+
+                    trs = "";
+                    for (var i = 0; i < supportedJobs.length; ++i) {
+                        var tr = "<tr>";
+                        tr += "<td>" + (i + 1) + "</td>";
+                        tr += "<td>" + supportedJobs[i] + "</td>";
+                        var isSchedulable = isContain(schedulableJobs, supportedJobs[i]);
+                        tr += "<td><div class='switch'><input type='checkbox'" + (isSchedulable ? " checked" : "") + "></div></td>";
+                        tr += "</tr>";
+                        trs += tr;
+                    }
+                    $("#supportedJobsTable tbody").append(trs);
+
+                    $("input[type=checkbox]").bootstrapSwitch();
+                }
+            },
+            error: function () {
+                alert("Failed to fetch the supported job information.");
+            }
+        });
+    }
+
+    function isContain(list, obj) {
+        for (var i = 0; i < list.length; ++i) {
+            if (list[i] == obj) {
+                return true;
+            }
+        }
+        return false;
+    }
+</script>

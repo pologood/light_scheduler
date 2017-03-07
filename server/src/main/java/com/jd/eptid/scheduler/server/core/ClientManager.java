@@ -1,7 +1,9 @@
 package com.jd.eptid.scheduler.server.core;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.jd.eptid.scheduler.core.domain.node.Client;
+import com.jd.eptid.scheduler.core.event.ClientEvent;
 import io.netty.util.internal.ConcurrentSet;
 import org.apache.commons.collections.CollectionUtils;
 import org.slf4j.Logger;
@@ -21,7 +23,6 @@ public class ClientManager {
     private Logger logger = LoggerFactory.getLogger(getClass());
     private Set<Client> clients = new ConcurrentSet<Client>();
     private ConcurrentMap<String, Set<Client>> schedulableClients = new ConcurrentHashMap<String, Set<Client>>();
-    private ConcurrentMap<String, Set<Client>> workingClients = new ConcurrentHashMap<String, Set<Client>>();
 
     public void register(String ip, int port, Set<String> supportedJobNames) {
         Assert.notEmpty(supportedJobNames, "supportedJobNames should not be empty.");
@@ -36,53 +37,126 @@ public class ClientManager {
         return clients.size();
     }
 
-    public void addSchedulableClient(Client client, Set<String> supportedJobNames) {
+    private void addSchedulableClient(Client client, Set<String> supportedJobNames) {
         for (String supportedJobName : supportedJobNames) {
-            Set<Client> clients = this.schedulableClients.get(supportedJobName);
-            if (clients == null) {
-                clients = new HashSet<Client>();
-                this.schedulableClients.put(supportedJobName, clients);
-            }
-            clients.add(client);
+            addSchedulableClient(supportedJobName, client);
         }
+        ServerContext.getInstance().getEventBroadcaster().publish(new ClientEvent(client, ClientEvent.Code.ADDED));
     }
 
     public void unregister(String ip, int port) {
         Assert.hasText(ip, "ip should not be empty.");
 
-        Client client = getClient(ip, port);
+        Client client = findClient0(ip, port);
         if (client == null) {
             logger.error("Client {}:{} not found.", ip, port);
             return;
         }
         clients.remove(client);
-        removeSchedulableClient(client);
-    }
 
-    public void removeSchedulableClient(Client removeClient) {
-        Iterator<Map.Entry<String, Set<Client>>> iterator = schedulableClients.entrySet().iterator();
-        while (iterator.hasNext()) {
-            Map.Entry<String, Set<Client>> entry = iterator.next();
-            Set<Client> clients = entry.getValue();
-            for (Client client : clients) {
-                if (client.equals(removeClient)) {
-                    iterator.remove();
-                }
-            }
+        boolean isRemoved = doRemoveSchedulableClient(client);
+        if (isRemoved) {
+            ServerContext.getInstance().getEventBroadcaster().publish(new ClientEvent(client, ClientEvent.Code.REMOVED));
         }
     }
 
-    public List<Client> getAllClients() {
-        return ImmutableList.copyOf(clients);
+    public void addSchedulableClient(String jobName, String ip, int port) {
+        Client client = findClient0(ip, port);
+        if (client == null) {
+            throw new IllegalArgumentException("Client [" + ip + ":" + port + "] has not been registered.");
+        }
+
+        addSchedulableClient(jobName, client);
     }
 
-    public Client getClient(String ip, int port) {
+    private void addSchedulableClient(String jobName, Client client) {
+        synchronized (schedulableClients) {
+            Set<Client> clients = this.schedulableClients.get(jobName);
+            if (clients == null) {
+                clients = new HashSet<Client>();
+                this.schedulableClients.put(jobName, clients);
+            }
+            clients.add(client);
+        }
+    }
+
+    public Client findClient(String ip, int port) {
+        for (Client client : clients) {
+            if (client.getIp().equals(ip) && client.getPort() == port) {
+                return (Client) client.clone();
+            }
+        }
+        return null;
+    }
+
+    private Client findClient0(String ip, int port) {
         for (Client client : clients) {
             if (client.getIp().equals(ip) && client.getPort() == port) {
                 return client;
             }
         }
         return null;
+    }
+
+    private Client findClient(Collection<Client> clients, String ip, int port) {
+        for (Client client : clients) {
+            if (client.getIp().equals(ip) && client.getPort() == port) {
+                return client;
+            }
+        }
+        return null;
+    }
+
+    public void removeSchedulableClient(String jobName, String ip, int port) {
+        Set<Client> clients = schedulableClients.get(jobName);
+        if (CollectionUtils.isEmpty(clients)) {
+            return;
+        }
+
+        Client client = findClient(clients, ip, port);
+        boolean isRemoved = clients.remove(client);
+        if (isRemoved) {
+            ServerContext.getInstance().getEventBroadcaster().publish(new ClientEvent(client, ClientEvent.Code.DISABLED));
+        }
+    }
+
+    public void removeSchedulableClient(String ip, int port) {
+        Client client = findClient0(ip, port);
+        if (client == null) {
+            throw new IllegalArgumentException("Client [" + ip + ":" + port + "] has not been registered.");
+        }
+
+        boolean isRemoved = doRemoveSchedulableClient(client);
+        if (isRemoved) {
+            ServerContext.getInstance().getEventBroadcaster().publish(new ClientEvent(client, ClientEvent.Code.DISABLED));
+        }
+    }
+
+    private boolean doRemoveSchedulableClient(Client removedClient) {
+        boolean isRemoved = false;
+        Iterator<Map.Entry<String, Set<Client>>> mappingIterator = schedulableClients.entrySet().iterator();
+        while (mappingIterator.hasNext()) {
+            Map.Entry<String, Set<Client>> entry = mappingIterator.next();
+            Set<Client> clients = entry.getValue();
+
+            Iterator<Client> clientIterator = clients.iterator();
+            while (clientIterator.hasNext()) {
+                Client client = clientIterator.next();
+                if (client.equals(removedClient)) {
+                    clientIterator.remove();
+                    isRemoved = true;
+                }
+            }
+
+            if (CollectionUtils.isEmpty(clients)) {
+                mappingIterator.remove();
+            }
+        }
+        return isRemoved;
+    }
+
+    public List<Client> getAllClients() {
+        return ImmutableList.copyOf(clients);
     }
 
     public List<Client> getSchedulableClients(String jobName) {
@@ -95,43 +169,24 @@ public class ClientManager {
         }
     }
 
-    public List<Client> getWorkingClients(String jobName) {
-        Assert.hasText(jobName, "jobName should not be empty.");
-        Set<Client> workings = workingClients.get(jobName);
-        if (CollectionUtils.isEmpty(workings)) {
-            return Collections.emptyList();
-        } else {
-            return ImmutableList.copyOf(workingClients.get(jobName));
-        }
+    public Map<String, Set<Client>> getAllSchedulableClients() {
+        return ImmutableMap.copyOf(schedulableClients);
     }
 
-    public boolean isWorkingClient(String jobName, Client client) {
-        Set<Client> workingClients = this.workingClients.get(jobName);
-        if (workingClients == null) {
-            return false;
-        }
-        return workingClients.contains(client);
-    }
+    public List<String> getSchedulableJobs(String ip, int port) {
+        List<String> scheduableJobs = new ArrayList<String>();
+        Client client = findClient0(ip, port);
+        for (Map.Entry<String, Set<Client>> entry : schedulableClients.entrySet()) {
+            Set<Client> clients = entry.getValue();
+            if (CollectionUtils.isEmpty(clients)) {
+                continue;
+            }
 
-    public void addWorkingClient(String jobName, Client client) {
-        Set<Client> clients = workingClients.get(jobName);
-        if (clients == null) {
-            clients = new HashSet<Client>();
+            if (clients.contains(client)) {
+                scheduableJobs.add(entry.getKey());
+            }
         }
-        clients.add(client);
-        workingClients.put(jobName, clients);
-    }
-
-    public void removeWorkingClient(String jobName, Client client) {
-        this.workingClients.remove(jobName, client);
-    }
-
-    public int sizeOfSchedulableClients(String jobName) {
-        Set<Client> clients = schedulableClients.get(jobName);
-        if (clients == null) {
-            return 0;
-        }
-        return clients.size();
+        return scheduableJobs;
     }
 
 }

@@ -20,12 +20,12 @@
         <ul class="sidebar-menu">
             <li class="header">HEADER</li>
             <!-- Optionally, you can add icons to the links -->
-            <li class="active"><a href="#"><i class="fa fa-dashboard"></i> <span>Dashboard</span></a></li>
+            <li><a href="/dashboard"><i class="fa fa-dashboard"></i> <span>Dashboard</span></a></li>
             <li class="treeview">
                 <a href="#"><i class="fa fa-clock-o"></i> <span>Job</span>
                     <span class="pull-right-container">
-              <i class="fa fa-angle-left pull-right"></i>
-            </span>
+                        <i class="fa fa-angle-left pull-right"></i>
+                    </span>
                 </a>
                 <ul class="treeview-menu">
                     <li><a href="/job/manage">Job Management</a></li>
@@ -36,15 +36,17 @@
             <li class="treeview">
                 <a href="#"><i class="fa fa-desktop"></i> <span>Client</span>
                     <span class="pull-right-container">
-              <i class="fa fa-angle-left pull-right"></i>
-            </span>
+                        <i class="fa fa-angle-left pull-right"></i>
+                    </span>
                 </a>
                 <ul class="treeview-menu">
                     <li><a href="/client/manage">Client Mangement</a></li>
-                    <li><a href="#">Client Monitor</a></li>
+                    <li><a href="/client/monitor">Client Monitor</a></li>
                 </ul>
             </li>
-            <li><a href="#"><i class="fa fa-cog"></i> <span>System Config</span></a></li>
+            <li>
+                <a href="/system/config"><i class="fa fa-cog"></i> <span>System Config</span></a>
+            </li>
         </ul>
         <!-- /.sidebar-menu -->
     </section>

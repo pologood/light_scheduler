@@ -15,16 +15,26 @@ public interface ScheduledJobDao {
 
     int count();
 
+    int countByStatus(int status);
+
     List<ScheduledJob> getByPage(@Param("rowNo") int rowNo, @Param("pageSize") int pageSize);
 
     ScheduledJob findByJobId(long jobId);
 
     ScheduledJob findRunningJobByJobId(long jobId);
 
+    ScheduledJob findLastScheduleByJobId(long jobId);
+
+    List<ScheduledJob> getAllRunningJobs();
+
     int add(ScheduledJob scheduledJob);
 
     int start(long id);
 
     int end(@Param("id") long id, @Param("endStatus") int endStatus, @Param("totalTasks") int totalTasks, @Param("successTasks") int successTasks, @Param("failedTasks") int failedTasks);
+
+    int forceStop(long id);
+
+    int cancel(long id);
 
 }

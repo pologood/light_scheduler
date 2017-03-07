@@ -49,7 +49,7 @@ public class ServerChannelHandler extends ChannelInboundHandlerAdapter {
         logger.info("Client {} disconnected.", ctx.channel().remoteAddress());
         ChannelHolder.removeChannel(ctx.channel());
 
-        closeConnection(ctx);
+        unregister(ctx);
     }
 
     @Override
@@ -75,11 +75,11 @@ public class ServerChannelHandler extends ChannelInboundHandlerAdapter {
         logger.error(cause.getMessage(), cause);
         if (cause instanceof IOException && ctx.channel().isActive()) {
             ctx.close();
-            closeConnection(ctx);
+            unregister(ctx);
         }
     }
 
-    private void closeConnection(ChannelHandlerContext ctx) {
+    private void unregister(ChannelHandlerContext ctx) {
         InetSocketAddress inetSocketAddress = (InetSocketAddress) ctx.channel().remoteAddress();
         clientManager.unregister(NetworkUtils.getIpAddress(inetSocketAddress), NetworkUtils.getPort(inetSocketAddress));
     }
